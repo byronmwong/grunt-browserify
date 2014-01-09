@@ -25,7 +25,8 @@ module.exports = function (grunt) {
 
 
     async.forEachSeries(this.files, function (file, next) {
-      var aliases;
+      var aliases,
+          expandedAliases = {};
       opts = task.options();
 
       ctorOpts.entries = grunt.file.expand({filter: 'isFile'}, file.src).map(function (f) {
@@ -108,7 +109,7 @@ module.exports = function (grunt) {
           grunt.file.expandMapping(alias.src, alias.dest, alias)
             .forEach(function (file) {
               var expose = file.dest.substr(0, file.dest.lastIndexOf('.'));
-              b.require(path.resolve(file.src[0]), {expose: expose});
+              expandedAliases[expose] = './' + file.src[0];
             });
         });
       }
@@ -215,6 +216,13 @@ module.exports = function (grunt) {
         opts.transform.forEach(function (transform) {
           b.transform(transform);
         });
+      }
+
+      if (!_.isEmpty(expandedAliases)) {
+        var aliasify = require('aliasify').configure({
+          aliases: expandedAliases
+        });
+        b.transform(aliasify);
       }
 
       var destPath = path.dirname(path.resolve(file.dest));
